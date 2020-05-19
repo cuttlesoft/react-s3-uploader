@@ -54,6 +54,8 @@ function S3Upload(options) {
 }
 
 S3Upload.prototype.handleFileSelect = function (files) {
+  this.uploadedFiles = [];
+  this.failedFiles = [];
   var result = [];
   for (var i = 0; i < files.length; i++) {
     var file = files[i];
@@ -170,15 +172,14 @@ S3Upload.prototype.uploadToS3 = function (file, signResult) {
       if (this.successResponses.indexOf(xhr.status) >= 0) {
         this.onProgress(100, "Upload completed", file);
         this.uploadedFiles.push(file);
-        this.onFinishS3Put(signResult, file);
 
         if (
           this.uploadedFiles.length + this.failedFiles.length ===
           this.files.length
         ) {
-          return this.onFinishAll();
+          return this.onFinishAll(signResult, file);
         }
-        return;
+        return this.onFinishS3Put(signResult, file);
       } else {
         return this.onError(
           "Upload error: " + xhr.status,
