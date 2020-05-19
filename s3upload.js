@@ -9,9 +9,11 @@ S3Upload.prototype.signingUrlMethod = "GET";
 S3Upload.prototype.successResponses = [200, 201];
 S3Upload.prototype.fileElement = null;
 S3Upload.prototype.files = null;
+S3Upload.prototype.uploadedFiles = [];
+S3Upload.prototype.failedFiles = [];
 
-S3Upload.prototype.onFinishAll = function (result) {
-  return console.log("base.onFinishAll()", result);
+S3Upload.prototype.onFinishAll = function () {
+  return console.log("base.onFinishAll()");
 };
 
 S3Upload.prototype.onFinishS3Put = function (signResult, file) {
@@ -28,6 +30,7 @@ S3Upload.prototype.onProgress = function (percent, status, file) {
 };
 
 S3Upload.prototype.onError = function (status, file) {
+  this.failedFiles.push(file);
   return console.log("base.onError()", status);
 };
 
@@ -63,7 +66,6 @@ S3Upload.prototype.handleFileSelect = function (files) {
       }.bind(this)
     );
   }
-  this.onFinishAll(result);
 };
 
 S3Upload.prototype.createCORSRequest = function (method, url, opts) {
@@ -167,7 +169,16 @@ S3Upload.prototype.uploadToS3 = function (file, signResult) {
     xhr.onload = function () {
       if (this.successResponses.indexOf(xhr.status) >= 0) {
         this.onProgress(100, "Upload completed", file);
-        return this.onFinishS3Put(signResult, file);
+        this.uploadedFiles.push(file);
+        this.onFinishS3Put(signResult, file);
+
+        if (
+          this.uploadedFiles.length + this.failedFiles.length ===
+          this.files.length
+        ) {
+          return this.onFinishAll();
+        }
+        return;
       } else {
         return this.onError(
           "Upload error: " + xhr.status,
